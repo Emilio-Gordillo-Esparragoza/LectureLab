@@ -32,6 +32,7 @@ from src.stats import (  # noqa: E402
 )
 
 FEATURES_PATH = ROOT / "data" / "features.parquet"
+LIVE_DEMO_URL = "https://physcientific.onrender.com/"
 RESPONSE_OPTIONS = [
     "nematic_order_S",
     "nematic_order_S_final",
@@ -80,199 +81,211 @@ PLOTLY_COLORS = [
 
 
 def inject_lab_css() -> None:
-    st.markdown(
-        f"""
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
-        <style>
-        :root {{
-            --paper: {PALETTE["paper"]};
-            --paper-deep: {PALETTE["paper_deep"]};
-            --ink: {PALETTE["ink"]};
-            --graphite: {PALETTE["graphite"]};
-            --grid: {PALETTE["grid"]};
-            --olive: {PALETTE["olive"]};
-            --ochre: {PALETTE["ochre"]};
-            --muted: {PALETTE["muted"]};
-        }}
+    # Use st.html (not st.markdown): markdown sanitization strips <style>,
+    # which leaks raw CSS rules as visible page text.
+    css = f"""
+<style>
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap");
 
-        html, body, [data-testid="stAppViewContainer"] {{
-            background:
-                linear-gradient(90deg, transparent 49px, var(--grid) 49px, var(--grid) 50px, transparent 50px),
-                linear-gradient(var(--grid) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-                var(--paper) !important;
-            background-size: 50px 50px, 10px 10px, 10px 10px, auto !important;
-            background-position: -1px -1px, 0 0, 0 0, 0 0 !important;
-            color: var(--ink);
-            font-family: "Source Sans 3", "Segoe UI", sans-serif;
-        }}
+:root {{
+    --paper: {PALETTE["paper"]};
+    --paper-deep: {PALETTE["paper_deep"]};
+    --ink: {PALETTE["ink"]};
+    --graphite: {PALETTE["graphite"]};
+    --grid: {PALETTE["grid"]};
+    --olive: {PALETTE["olive"]};
+    --ochre: {PALETTE["ochre"]};
+    --muted: {PALETTE["muted"]};
+}}
 
-        [data-testid="stHeader"] {{
-            background: transparent !important;
-        }}
+html, body, [data-testid="stAppViewContainer"] {{
+    background:
+        linear-gradient(90deg, transparent 49px, var(--grid) 49px, var(--grid) 50px, transparent 50px),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        var(--paper) !important;
+    background-size: 50px 50px, 10px 10px, 10px 10px, auto !important;
+    background-position: -1px -1px, 0 0, 0 0, 0 0 !important;
+    color: var(--ink);
+    font-family: "Source Sans 3", "Segoe UI", sans-serif;
+}}
 
-        .block-container {{
-            padding-top: 1.4rem !important;
-            padding-bottom: 3rem !important;
-            max-width: 1180px !important;
-        }}
+[data-testid="stHeader"] {{
+    background: transparent !important;
+}}
 
-        h1, h2, h3, .lab-brand {{
-            font-family: "Source Serif 4", Georgia, serif !important;
-            color: var(--ink) !important;
-            letter-spacing: -0.01em;
-            font-weight: 600 !important;
-        }}
+.block-container {{
+    padding-top: 1.4rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1180px !important;
+}}
 
-        h1 {{
-            font-size: 2.05rem !important;
-            margin-bottom: 0.15rem !important;
-            border-bottom: 1.5px solid var(--ink);
-            padding-bottom: 0.45rem;
-        }}
+h1, h2, h3, .lab-brand {{
+    font-family: "Source Serif 4", Georgia, serif !important;
+    color: var(--ink) !important;
+    letter-spacing: -0.01em;
+    font-weight: 600 !important;
+}}
 
-        .lab-kicker {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace;
-            font-size: 0.72rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--olive);
-            margin: 0 0 0.35rem 0;
-        }}
+h1 {{
+    font-size: 2.05rem !important;
+    margin-bottom: 0.15rem !important;
+    border-bottom: 1.5px solid var(--ink);
+    padding-bottom: 0.45rem;
+}}
 
-        .lab-lede {{
-            font-family: "Source Serif 4", Georgia, serif;
-            font-size: 1.05rem;
-            color: var(--graphite);
-            max-width: 42rem;
-            line-height: 1.45;
-            margin: 0.55rem 0 1.1rem 0;
-        }}
+.lab-kicker {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--olive);
+    margin: 0 0 0.35rem 0;
+}}
 
-        .lab-meta {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.55rem 1.1rem;
-            font-family: "IBM Plex Mono", ui-monospace, monospace;
-            font-size: 0.75rem;
-            color: var(--graphite);
-            border-top: 1px dashed var(--grid);
-            border-bottom: 1px dashed var(--grid);
-            padding: 0.55rem 0;
-            margin-bottom: 1.15rem;
-        }}
+.lab-kicker a {{
+    color: var(--ochre);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}}
 
-        .lab-meta b {{
-            color: var(--ink);
-            font-weight: 600;
-        }}
+.lab-lede {{
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 1.05rem;
+    color: var(--graphite);
+    max-width: 42rem;
+    line-height: 1.45;
+    margin: 0.55rem 0 1.1rem 0;
+}}
 
-        .lab-findings {{
-            background: var(--paper-deep);
-            border: 1px solid var(--ink);
-            border-left: 4px solid var(--olive);
-            padding: 0.75rem 1rem;
-            margin: 0 0 1.2rem 0;
-        }}
-        .lab-findings-label {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace;
-            font-size: 0.68rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--olive);
-            margin-bottom: 0.35rem;
-        }}
-        .lab-findings p {{
-            font-family: "Source Serif 4", Georgia, serif;
-            font-size: 0.98rem;
-            color: var(--ink);
-            line-height: 1.45;
-            margin: 0;
-        }}
+.lab-meta {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1.1rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--graphite);
+    border-top: 1px dashed var(--grid);
+    border-bottom: 1px dashed var(--grid);
+    padding: 0.55rem 0;
+    margin-bottom: 1.15rem;
+}}
 
-        /* Tabs — ruled notebook feel */
-        .stTabs [data-baseweb="tab-list"] {{
-            gap: 0.15rem;
-            border-bottom: 1.5px solid var(--ink);
-            background: transparent;
-        }}
-        .stTabs [data-baseweb="tab"] {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace !important;
-            font-size: 0.78rem !important;
-            letter-spacing: 0.04em;
-            color: var(--graphite) !important;
-            background: transparent !important;
-            border: none !important;
-            padding: 0.55rem 0.9rem !important;
-        }}
-        .stTabs [aria-selected="true"] {{
-            color: var(--ink) !important;
-            background: var(--paper-deep) !important;
-            border-bottom: 3px solid var(--ochre) !important;
-        }}
+.lab-meta b {{
+    color: var(--ink);
+    font-weight: 600;
+}}
 
-        /* Instrument readouts */
-        div[data-testid="stMetric"] {{
-            background: var(--paper-deep);
-            border: 1px solid var(--ink);
-            padding: 0.65rem 0.75rem 0.55rem;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-        }}
-        div[data-testid="stMetric"] label {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace !important;
-            font-size: 0.68rem !important;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--graphite) !important;
-        }}
-        div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace !important;
-            font-size: 1.35rem !important;
-            font-weight: 600 !important;
-            color: var(--ink) !important;
-        }}
+.lab-meta a {{
+    color: var(--olive);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+}}
 
-        /* Controls */
-        .stSelectbox label, .stSlider label, .stNumberInput label {{
-            font-family: "IBM Plex Mono", ui-monospace, monospace !important;
-            font-size: 0.72rem !important;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: var(--graphite) !important;
-        }}
+.lab-findings {{
+    background: var(--paper-deep);
+    border: 1px solid var(--ink);
+    border-left: 4px solid var(--olive);
+    padding: 0.75rem 1rem;
+    margin: 0 0 1.2rem 0;
+}}
+.lab-findings-label {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--olive);
+    margin-bottom: 0.35rem;
+}}
+.lab-findings p {{
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 0.98rem;
+    color: var(--ink);
+    line-height: 1.45;
+    margin: 0;
+}}
 
-        /* Expanders / dataframes */
-        .streamlit-expanderHeader {{
-            font-family: "Source Serif 4", Georgia, serif !important;
-            color: var(--ink) !important;
-        }}
-        [data-testid="stDataFrame"] {{
-            border: 1px solid var(--grid);
-        }}
+/* Tabs — ruled notebook feel */
+.stTabs [data-baseweb="tab-list"] {{
+    gap: 0.15rem;
+    border-bottom: 1.5px solid var(--ink);
+    background: transparent;
+}}
+.stTabs [data-baseweb="tab"] {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.04em;
+    color: var(--graphite) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0.55rem 0.9rem !important;
+}}
+.stTabs [aria-selected="true"] {{
+    color: var(--ink) !important;
+    background: var(--paper-deep) !important;
+    border-bottom: 3px solid var(--ochre) !important;
+}}
 
-        /* Info / alert restyle */
-        [data-testid="stAlert"] {{
-            background: var(--paper-deep) !important;
-            border: 1px solid var(--olive) !important;
-            color: var(--ink) !important;
-        }}
+/* Instrument readouts */
+div[data-testid="stMetric"] {{
+    background: var(--paper-deep);
+    border: 1px solid var(--ink);
+    padding: 0.65rem 0.75rem 0.55rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+}}
+div[data-testid="stMetric"] label {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+    font-size: 0.68rem !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--graphite) !important;
+}}
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+    font-size: 1.35rem !important;
+    font-weight: 600 !important;
+    color: var(--ink) !important;
+}}
 
-        /* Mobile */
-        @media (max-width: 768px) {{
-            h1 {{ font-size: 1.55rem !important; }}
-            .lab-lede {{ font-size: 0.98rem; }}
-            .block-container {{ padding-left: 1rem !important; padding-right: 1rem !important; }}
-        }}
+/* Controls */
+.stSelectbox label, .stSlider label, .stNumberInput label {{
+    font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--graphite) !important;
+}}
 
-        @media (prefers-reduced-motion: reduce) {{
-            * {{ animation: none !important; transition: none !important; }}
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+/* Expanders / dataframes */
+.streamlit-expanderHeader {{
+    font-family: "Source Serif 4", Georgia, serif !important;
+    color: var(--ink) !important;
+}}
+[data-testid="stDataFrame"] {{
+    border: 1px solid var(--grid);
+}}
+
+/* Info / alert restyle */
+[data-testid="stAlert"] {{
+    background: var(--paper-deep) !important;
+    border: 1px solid var(--olive) !important;
+    color: var(--ink) !important;
+}}
+
+/* Mobile */
+@media (max-width: 768px) {{
+    h1 {{ font-size: 1.55rem !important; }}
+    .lab-lede {{ font-size: 0.98rem; }}
+    .block-container {{ padding-left: 1rem !important; padding-right: 1rem !important; }}
+}}
+
+@media (prefers-reduced-motion: reduce) {{
+    * {{ animation: none !important; transition: none !important; }}
+}}
+</style>
+"""
+    st.html(css)
 
 
 def apply_plotly_theme(fig: go.Figure, height: int = 400) -> go.Figure:
@@ -359,15 +372,19 @@ def lab_header(df: pd.DataFrame) -> None:
           </p>
         </div>
         """
-    st.markdown(
+    st.html(
         f"""
-        <div class="lab-kicker">Statistical laboratory · PolymathicAI The Well</div>
+        <div class="lab-kicker">
+          Statistical laboratory · PolymathicAI The Well ·
+          <a href="{LIVE_DEMO_URL}" target="_blank" rel="noopener noreferrer">Live demo</a>
+        </div>
         <h1 class="lab-brand">active_matter · circumstance &amp; response</h1>
         <p class="lab-lede">
           Quantify how initial control factors (α, ζ) shape nematic order and flow,
           with ANOVA evidence, physics-law checks, and within-cell anomaly flags.
         </p>
         <div class="lab-meta">
+          <span>live demo <a href="{LIVE_DEMO_URL}" target="_blank" rel="noopener noreferrer">{LIVE_DEMO_URL.rstrip("/")}</a></span>
           <span>source <b>{source}</b></span>
           <span>trajectories <b>{meta["n_rows"]}</b></span>
           <span>α levels <b>{meta["n_alpha"]}</b></span>
@@ -375,8 +392,7 @@ def lab_header(df: pd.DataFrame) -> None:
           <span>factorial cells <b>{meta["n_cells"]}</b></span>
         </div>
         {findings_html}
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
 

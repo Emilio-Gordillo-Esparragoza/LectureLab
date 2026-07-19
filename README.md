@@ -2,7 +2,7 @@
 
 Statistical analysis and an interactive ANOVA dashboard for physics simulations from **[The Well](https://github.com/PolymathicAI/the_well)** (`active_matter` dataset).
 
-**Live demo:** [https://physcientific.onrender.com](https://physcientific.onrender.com)  
+**Live demo:** [https://physcientific.onrender.com/](https://physcientific.onrender.com/)  
 *(Render free tier may cold-start for ~30–60s after idle.)*
 
 Repository: [Emilio-Gordillo-Esparragoza/phyScientific](https://github.com/Emilio-Gordillo-Esparragoza/phyScientific)
