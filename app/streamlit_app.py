@@ -1330,7 +1330,9 @@ def tab_pattern_metrics(df: pd.DataFrame, spec: DatasetSpec) -> None:
     )
     st.plotly_chart(apply_plotly_theme(fig_s, height=420), use_container_width=True)
 
-    num_cols = [c for c in ["f", "k", *responses] if c in df.columns]
+    num_cols = list(
+        dict.fromkeys(c for c in ["f", "k", *responses] if c in df.columns)
+    )
     corr = df[num_cols].corr(method="spearman")
     fig_c = px.imshow(
         corr,
@@ -1459,16 +1461,18 @@ def tab_response_interactions(df: pd.DataFrame, spec: DatasetSpec) -> None:
             "frequencies after scattering — a frequency-response style readout for this maze ensemble."
         )
 
-    num_cols = [
-        c
-        for c in [
-            "maze_width",
-            "n_sources",
-            "wall_fraction",
-            *responses,
-        ]
-        if c in df.columns
-    ]
+    num_cols = list(
+        dict.fromkeys(
+            c
+            for c in [
+                "maze_width",
+                "n_sources",
+                "wall_fraction",
+                *responses,
+            ]
+            if c in df.columns
+        )
+    )
     corr = df[num_cols].corr(method="spearman")
     fig_c = px.imshow(
         corr,
