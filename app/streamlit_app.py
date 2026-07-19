@@ -1,9 +1,8 @@
 """
 Streamlit dashboard:
-  Sidebar — dataset picker (active_matter / gray_scott / acoustic_scattering)
-  Tab 1 — Interactive ANOVA teaching sandbox
-  Tab 2 — Real-data ANOVA on selected dataset features
-  Tab 3 — Physics validation & anomalies
+  Sidebar — dataset picker (active_matter / gray_scott / acoustic_scattering /
+             planetary_motion)
+  Panels depend on analysis_mode (ANOVA, phase, interaction, or orbit/Feynman).
 
 Visual language: lab notebook / chart paper — ink, graphite, muted olive & ochre.
 """
@@ -541,22 +540,24 @@ AUTHOR = "Emilio Gordillo Esparragoza"
 
 
 def render_dataset_sidebar() -> DatasetSpec:
-    """Collapsed sidebar drawer: pick which Well feature table to analyze."""
+    """Collapsed sidebar drawer: pick which feature table / lab to open."""
     if "dataset_id" not in st.session_state:
         st.session_state["dataset_id"] = "active_matter"
 
     with st.sidebar:
         st.markdown('<p class="lab-sidebar-kicker">Dataset</p>', unsafe_allow_html=True)
         st.markdown(
-            '<p class="lab-sidebar-hint">Choose a The Well ensemble. '
+            '<p class="lab-sidebar-hint">Choose a lab. '
             "active_matter keeps ANOVA; gray_scott and acoustic use phase / "
-            "interaction views instead.</p>",
+            "interaction views; planetary_motion is Feynman’s geometric orbit proof."
+            "</p>",
             unsafe_allow_html=True,
         )
         labels = {
             "active_matter": "active_matter",
             "gray_scott": "gray_scott",
             "acoustic_scattering": "acoustic_scattering",
+            "planetary_motion": "planetary_motion",
         }
         choice = st.radio(
             "Ensemble",
@@ -566,8 +567,12 @@ def render_dataset_sidebar() -> DatasetSpec:
             label_visibility="collapsed",
         )
         spec = get_dataset(choice)
-        st.caption(f"HF · `{spec.hf_name}`")
-        st.markdown(f"[Dataset card]({spec.hf_url})")
+        if spec.analysis_mode == "orbit":
+            st.caption("Pedagogical · Feynman Lost Lecture")
+            st.markdown(f"[Lecture video]({spec.hf_url})")
+        else:
+            st.caption(f"HF · `{spec.hf_name}`")
+            st.markdown(f"[Dataset card]({spec.hf_url})")
         st.markdown(
             f"<p class='lab-sidebar-hint'>Factors: "
             f"<code>{spec.factor_a}</code> × <code>{spec.factor_b}</code></p>",
@@ -576,10 +581,45 @@ def render_dataset_sidebar() -> DatasetSpec:
     return get_dataset(st.session_state["dataset_id"])
 
 
+FEYNMAN_QUOTE = (
+    "I am going to give what I will call an elementary demonstration. "
+    "But elementary does not mean easy to understand. Elementary means that "
+    "very little is required to know ahead of time in order to understand it, "
+    "except to have an infinite amount of intelligence. There may be a large "
+    "number of steps that hard to follow, but to each does not require already "
+    "knowing the calculus or Fourier transforms. Yeah, that’s all, infinite "
+    "intelligence. I think you’re up to that, don’t you?"
+)
+
+
+def feynman_quote_block() -> None:
+    st.html(
+        f"""
+        <blockquote style="margin:0.6rem 0 1.4rem 0;padding:1rem 1.15rem;
+                           background:{PALETTE["paper_deep"]};
+                           border-left:4px solid {PALETTE["ochre"]};
+                           border:1px solid {PALETTE["ink"]};
+                           border-left-width:4px;
+                           font-family:'Source Serif 4',Georgia,serif;
+                           font-size:1.02rem;line-height:1.55;color:{PALETTE["ink"]};">
+          <p style="margin:0 0 0.65rem 0;font-style:italic;">{FEYNMAN_QUOTE}</p>
+          <footer style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+                         letter-spacing:0.08em;text-transform:uppercase;
+                         color:{PALETTE["graphite"]};">
+            — Richard Feynman · The Motion of Planets Around the Sun (1964)
+          </footer>
+        </blockquote>
+        """
+    )
+
+
 def lab_header(df: pd.DataFrame, spec: DatasetSpec) -> None:
     meta = data_provenance(df, spec)
     findings_html = ""
-    if not meta["synthetic"] and spec.findings_real:
+    show_findings = bool(spec.findings_real) and (
+        (not meta["synthetic"]) or spec.analysis_mode == "orbit"
+    )
+    if show_findings:
         findings_html = f"""
         <div class="lab-findings">
           <div class="lab-findings-label">Results at a glance</div>
@@ -588,10 +628,20 @@ def lab_header(df: pd.DataFrame, spec: DatasetSpec) -> None:
           </p>
         </div>
         """
+    dataset_label = (
+        f"What is the {spec.id} lab?"
+        if spec.analysis_mode == "orbit"
+        else f"What is the {spec.id} dataset?"
+    )
+    kicker = (
+        "Elementary geometric laboratory"
+        if spec.analysis_mode == "orbit"
+        else "Statistical laboratory"
+    )
     st.html(
         f"""
         <div class="lab-kicker">
-          Statistical laboratory
+          {kicker}
         </div>
         <h1 class="lab-brand">{spec.title}</h1>
         <p class="lab-lede">
@@ -604,7 +654,7 @@ def lab_header(df: pd.DataFrame, spec: DatasetSpec) -> None:
           <span>factorial cells <b>{meta["n_cells"]}</b></span>
         </div>
         <div class="lab-dataset">
-          <div class="lab-dataset-label">What is the {spec.id} dataset?</div>
+          <div class="lab-dataset-label">{dataset_label}</div>
           <p>
             {spec.blurb}
           </p>
@@ -1484,6 +1534,449 @@ def tab_response_interactions(df: pd.DataFrame, spec: DatasetSpec) -> None:
     st.plotly_chart(apply_plotly_theme(fig_c, height=440), use_container_width=True)
 
 
+def _orbit_position_figure(data: dict, snap, show_construction: bool) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=np.append(data["x"], data["x"][0]),
+            y=np.append(data["y"], data["y"][0]),
+            mode="lines",
+            name="orbit",
+            line=dict(color=PALETTE["olive"], width=2),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            mode="markers+text",
+            name="Sun (F₁)",
+            text=["Sun"],
+            textposition="top center",
+            marker=dict(size=12, color=PALETTE["ochre"], symbol="star"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[snap.f2x],
+            y=[snap.f2y],
+            mode="markers+text",
+            name="F₂",
+            text=["F₂"],
+            textposition="top center",
+            marker=dict(size=9, color=PALETTE["graphite"], symbol="x"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[snap.rx],
+            y=[snap.ry],
+            mode="markers",
+            name="planet",
+            marker=dict(size=11, color=PALETTE["ink"]),
+        )
+    )
+    # Position + velocity arrow
+    fig.add_trace(
+        go.Scatter(
+            x=[0.0, snap.rx],
+            y=[0.0, snap.ry],
+            mode="lines",
+            name="r",
+            line=dict(color=PALETTE["graphite"], width=1, dash="dot"),
+            showlegend=False,
+        )
+    )
+    v_scale = 0.35 * max(float(np.max(np.hypot(data["x"], data["y"]))), 1e-9) / max(
+        float(np.hypot(snap.vx, snap.vy)), 1e-9
+    )
+    fig.add_annotation(
+        x=snap.rx + snap.vx * v_scale,
+        y=snap.ry + snap.vy * v_scale,
+        ax=snap.rx,
+        ay=snap.ry,
+        xref="x",
+        yref="y",
+        axref="x",
+        ayref="y",
+        showarrow=True,
+        arrowhead=3,
+        arrowwidth=2,
+        arrowcolor=PALETTE["ochre"],
+    )
+    if show_construction:
+        fig.add_trace(
+            go.Scatter(
+                x=[snap.construct_x],
+                y=[snap.construct_y],
+                mode="markers",
+                name="construction P",
+                marker=dict(size=9, color=PALETTE["olive_soft"], symbol="diamond"),
+            )
+        )
+    fig.update_layout(
+        title="Position space",
+        xaxis_title="x",
+        yaxis_title="y",
+        yaxis_scaleanchor="x",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    return fig
+
+
+def _orbit_velocity_figure(data: dict, snap, circ, show_construction: bool) -> go.Figure:
+    fig = go.Figure()
+    # Hodograph trail
+    fig.add_trace(
+        go.Scatter(
+            x=np.append(data["vx"], data["vx"][0]),
+            y=np.append(data["vy"], data["vy"][0]),
+            mode="lines",
+            name="hodograph",
+            line=dict(color=PALETTE["olive"], width=2),
+        )
+    )
+    # Analytic circle
+    phi = np.linspace(0, 2 * np.pi, 200)
+    fig.add_trace(
+        go.Scatter(
+            x=circ.center_vx + circ.radius * np.cos(phi),
+            y=circ.center_vy + circ.radius * np.sin(phi),
+            mode="lines",
+            name="velocity circle",
+            line=dict(color=PALETTE["ochre"], width=1.5, dash="dash"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0.0],
+            y=[0.0],
+            mode="markers+text",
+            name="O (v-origin)",
+            text=["O"],
+            textposition="bottom center",
+            marker=dict(size=10, color=PALETTE["ink"]),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[circ.center_vx],
+            y=[circ.center_vy],
+            mode="markers+text",
+            name="eccentric C",
+            text=["C"],
+            textposition="top center",
+            marker=dict(size=10, color=PALETTE["ochre"], symbol="diamond"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0.0, snap.px],
+            y=[0.0, snap.py],
+            mode="lines+markers",
+            name="velocity tip p",
+            line=dict(color=PALETTE["graphite"], width=2),
+            marker=dict(size=8, color=PALETTE["ink"]),
+        )
+    )
+    if show_construction:
+        fig.add_trace(
+            go.Scatter(
+                x=[0.0, snap.p_rot_x],
+                y=[0.0, snap.p_rot_y],
+                mode="lines",
+                name="Op rotated 90°",
+                line=dict(color=PALETTE["olive_soft"], width=1.5, dash="dot"),
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[circ.center_vx, snap.px],
+                y=[circ.center_vy, snap.py],
+                mode="lines",
+                name="C→p",
+                line=dict(color=PALETTE["muted"], width=1, dash="dash"),
+            )
+        )
+    fig.update_layout(
+        title="Velocity space (hodograph)",
+        xaxis_title="vₓ",
+        yaxis_title="vᵧ",
+        yaxis_scaleanchor="x",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    )
+    return fig
+
+
+def tab_orbit_elementary(spec: DatasetSpec) -> None:
+    from src.orbit_feynman import (
+        construction_at_theta,
+        hodograph_circle,
+        sample_orbit,
+    )
+
+    st.markdown("### Elementary demonstration")
+    st.markdown(
+        "Why do planets orbit in **ellipses**? Feynman’s answer maps the motion to "
+        "**velocity space**: under an inverse-square central force the tip of the "
+        "velocity vector traces a **circle**. An eccentric point on that circle, "
+        "plus a 90° rotation, recovers the ellipse with the Sun at a focus."
+    )
+    st.caption(
+        "Docs: `docs/celestial/feynman_elementary.md` · "
+        "Notebook: `notebooks/feynman_lost_lecture.ipynb`"
+    )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        e = st.slider("Eccentricity e", 0.0, 0.85, 0.45, 0.01, key="orbit_e")
+    with c2:
+        a = st.slider("Semi-major axis a", 0.6, 2.0, 1.0, 0.05, key="orbit_a")
+    with c3:
+        theta_deg = st.slider("True anomaly θ (deg)", 0, 359, 40, 1, key="orbit_theta")
+    show_construction = st.checkbox(
+        "Show eccentric-point / 90° construction overlay",
+        value=True,
+        key="orbit_construct",
+    )
+
+    mu = 1.0
+    data = sample_orbit(a=a, e=e, mu=mu, n=360)
+    snap = construction_at_theta(np.deg2rad(theta_deg), a=a, e=e, mu=mu)
+    circ = hodograph_circle(a=a, e=e, mu=mu)
+
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(
+            apply_plotly_theme(_orbit_position_figure(data, snap, show_construction), height=460),
+            use_container_width=True,
+        )
+    with right:
+        st.plotly_chart(
+            apply_plotly_theme(
+                _orbit_velocity_figure(data, snap, circ, show_construction), height=460
+            ),
+            use_container_width=True,
+        )
+    fig_note(
+        f"At θ={theta_deg}°: |PF₁|+|PF₂|={snap.focus_sum:.4f} (target 2a={2*a:.4f}); "
+        f"h={snap.h:.4f}. Velocity tip p lies on the circle centered at the eccentric point C."
+    )
+
+    with st.expander("1 · Setup — the physical system", expanded=True):
+        st.markdown(
+            "The Sun sits at a **focus**. The planet’s position $\\mathbf{r}$ and "
+            "velocity $\\mathbf{v}$ update with true anomaly $\\theta$. "
+            "Kepler’s first law claims the path is an ellipse — that is what we prove."
+        )
+    with st.expander("2 · Introducing the velocity diagram"):
+        st.markdown(
+            "Translate every velocity vector so it starts at a common origin $O$. "
+            "The tip $p$ of $\\mathbf{v}$ traces a path in **velocity space**. "
+            "Because gravity is a **central** force, $\\Delta\\mathbf{v}$ is always "
+            "radial (toward the Sun). For the inverse-square law the tips form a "
+            "**perfect circle**."
+        )
+    with st.expander("3 · Inverse-square + equal areas"):
+        st.markdown(
+            r"""
+- **Newton:** $F = -GMm/r^{2}\,\hat{\mathbf{r}}$ so $|\Delta v|\propto \Delta t / r^{2}$.
+- **Kepler II:** equal areas in equal times $\Leftrightarrow$ $h = r\,v_{\perp}$ constant,
+  so the time to sweep a fixed angle scales as $r^{2}$.
+- Combining these: **equal changes in velocity occur in equal orbital angles** — hence
+  equal chord lengths on the velocity diagram, which force a circle.
+            """
+        )
+    with st.expander("4 · The eccentric point and 90° rotation"):
+        st.markdown(
+            "The velocity origin $O$ is **offset** from the circle’s center $C$ "
+            "(the eccentric point). Rotating the diagram by $90^{\\circ}$ aligns "
+            "velocity-parallel lines with the geometry of the position-space orbit. "
+            "The perpendicular bisector of $Op$ meeting the ray $Cp$ maps onto the "
+            "planet’s location."
+        )
+    with st.expander("5 · Finale — the locus is an ellipse"):
+        st.markdown(
+            "As $p$ runs around the velocity circle, the constructed points satisfy "
+            "$|PF_1| + |PF_2| = 2a$ — the gardener’s definition of an ellipse with "
+            "foci $F_1$ (the Sun) and $F_2$. Therefore the orbit **must** be an ellipse."
+        )
+
+
+def tab_orbit_formal(spec: DatasetSpec) -> None:
+    st.markdown("### Formal demonstration")
+    st.markdown(
+        "A calculus / vector companion to the elementary hodograph argument. "
+        "Full write-up: `docs/celestial/feynman_formal.md` · "
+        "executable: `notebooks/feynman_lost_lecture.ipynb`."
+    )
+
+    st.markdown("#### 1. Central inverse-square force")
+    st.markdown(
+        r"""
+Newton’s law of gravitation
+$$
+\mathbf{F} = -\frac{GMm}{r^{2}}\hat{\mathbf{r}} = -\frac{\mu m}{r^{2}}\hat{\mathbf{r}},
+\quad \mu = GM.
+$$
+The torque $\mathbf{r}\times\mathbf{F}$ vanishes, so specific angular momentum
+$\mathbf{h} = \mathbf{r}\times\mathbf{v}$ is **constant** (Kepler’s second law).
+        """
+    )
+
+    st.markdown("#### 2. Circular hodograph (vector form)")
+    st.markdown(
+        r"""
+Differentiate $\mathbf{v}$ with respect to true anomaly. With $h$ constant and
+$a_r = -\mu/r^{2}$,
+$$
+\frac{d\mathbf{v}}{d\theta} = \frac{d\mathbf{v}}{dt}\frac{dt}{d\theta}
+= \mathbf{a}\,\frac{r^{2}}{h} = -\frac{\mu}{h}\hat{\mathbf{r}}.
+$$
+Integrating yields a velocity tip that lies on a **circle** of radius $\mu/h$
+offset from the origin by a vector of length $e\,\mu/h$ (the eccentricity vector
+direction). This is Maxwell’s / Feynman’s hodograph theorem for $1/r^{2}$.
+        """
+    )
+
+    st.markdown("#### 3. Eccentric point → ellipse")
+    st.markdown(
+        r"""
+Let $C$ be the center of the velocity circle and $O$ the velocity origin
+(eccentric point). The geometric construction of Goodstein & Goodstein
+(following Feynman, after Maxwell) shows that the locus of points obtained by
+the $90^{\circ}$ / perpendicular-bisector map is an ellipse with one focus at the
+force center — equivalently $|PF_1|+|PF_2|=2a$.
+        """
+    )
+
+    st.markdown("#### 4. Runge–Lenz vector (modern formal route)")
+    st.markdown(
+        r"""
+Define the Laplace–Runge–Lenz vector
+$$
+\mathbf{A} = \mathbf{v}\times\mathbf{h} - \mu\,\hat{\mathbf{r}}.
+$$
+For $F\propto 1/r^{2}$ one finds $\dot{\mathbf{A}}=\mathbf{0}$. Taking the
+dot product with $\mathbf{r}$ gives the polar conic
+$$
+r = \frac{h^{2}/\mu}{1 + e\cos\theta},
+\quad e = |\mathbf{A}|/\mu.
+$$
+Bound orbits ($E<0$, $e<1$) are **ellipses** with the Sun at a focus
+(Kepler I). Hyperbolas ($e>1$) recover Rutherford scattering — which Feynman
+also connected to the same geometry.
+        """
+    )
+
+    st.markdown("#### 5. Optional: Binet equation")
+    st.markdown(
+        r"""
+With $u=1/r$ the orbit equation becomes
+$$
+\frac{d^{2}u}{d\theta^{2}} + u = \frac{\mu}{h^{2}},
+$$
+whose general solution is $u = (\mu/h^{2})(1 + e\cos(\theta-\theta_0))$ —
+again a conic with focus at the origin.
+        """
+    )
+
+    st.info(
+        "Elementary ≠ informal: both routes prove the same theorem. "
+        "The hodograph proof avoids solving ODEs; Runge–Lenz makes conservation "
+        "manifest. See `docs/bibliography.md` for Newton, Maxwell, Goodstein, "
+        "and Hall & Higson."
+    )
+
+
+def tab_orbit_physics(df: pd.DataFrame, spec: DatasetSpec) -> None:
+    """Physics cards + residual charts for the synthetic orbit table."""
+    from src.stats import detect_anomalies, physics_validation
+
+    st.markdown("### Physics validation & anomalies")
+    st.markdown(
+        "Numeric checks that the synthetic Kepler grid obeys the geometry "
+        "behind Feynman’s proof: circular hodograph, conserved $h$, and "
+        "focus-sum $2a$."
+    )
+
+    phys = physics_validation(df, checks=spec.physics_checks)
+    for key, block in phys.items():
+        color = PALETTE["pass"] if block["pass"] else PALETTE["fail"]
+        title = block.get("title", key.replace("_", " ").title())
+        st.markdown(
+            f"""
+            <div style="padding:0.7rem 1rem;margin-bottom:0.55rem;
+                        background:{PALETTE["paper_deep"]};
+                        border:1px solid {PALETTE["ink"]};
+                        border-left:5px solid {color};">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+                             letter-spacing:0.1em;text-transform:uppercase;color:{color};">
+                    {"Pass" if block["pass"] else "Fail"}
+                </span>
+                <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:600;
+                            color:{PALETTE["ink"]};margin-top:0.15rem;">
+                    {title}
+                </div>
+                <div style="color:{PALETTE["graphite"]};font-size:0.95rem;margin-top:0.2rem;">
+                    {block["message"]}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    fig_note(
+        "Pass/fail cards summarize focus-sum, hodograph circularity, and angular-momentum checks."
+    )
+
+    if "eccentricity" in df.columns and "hodograph_circle_rms" in df.columns:
+        st.markdown("#### Hodograph circle-fit RMS vs eccentricity")
+        fig = px.scatter(
+            df,
+            x="eccentricity",
+            y="hodograph_circle_rms",
+            color=df["angular_momentum"].astype(str),
+            labels={"color": "h"},
+            title="Hodograph RMS residual",
+            opacity=0.75,
+            color_discrete_sequence=PLOTLY_COLORS,
+        )
+        st.plotly_chart(apply_plotly_theme(fig, height=400), use_container_width=True)
+        fig_note("Residuals stay at machine-epsilon scale across the (e, h) grid.")
+
+    if "eccentricity" in df.columns and "focus_sum_error" in df.columns:
+        st.markdown("#### Focus-sum error vs eccentricity")
+        fig2 = px.scatter(
+            df,
+            x="eccentricity",
+            y="focus_sum_error",
+            color=df["angular_momentum"].astype(str),
+            labels={"color": "h"},
+            title="| |PF₁|+|PF₂| − 2a |",
+            opacity=0.75,
+            color_discrete_sequence=PLOTLY_COLORS,
+        )
+        st.plotly_chart(apply_plotly_theme(fig2, height=400), use_container_width=True)
+
+    fa, fb = spec.factor_a, spec.factor_b
+    responses = [c for c in spec.response_options if c in df.columns]
+    if responses and {fa, fb} <= set(df.columns):
+        response = st.selectbox("Anomaly screen feature", responses, index=0)
+        flagged = detect_anomalies(df, response=response, group_cols=[fa, fb])
+        n_flag = int(flagged["is_anomaly"].sum())
+        verdict_banner(
+            f"Within-cell MAD screen flags {n_flag} / {len(flagged)} orbits on `{response}`.",
+            "moderate_evidence" if n_flag else "no_visible_difference",
+        )
+        st.dataframe(
+            flagged.loc[
+                flagged["is_anomaly"],
+                [c for c in ("trajectory_id", fa, fb, response, "anomaly_score") if c in flagged.columns],
+            ].head(20),
+            use_container_width=True,
+        )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="statistical laboratory · The Well",
@@ -1495,6 +1988,8 @@ def main() -> None:
     spec = render_dataset_sidebar()
     df = load_features_or_stop(spec)
     lab_header(df, spec)
+    if spec.analysis_mode == "orbit":
+        feynman_quote_block()
 
     # Dataset-specific panels: ANOVA only for active_matter
     labels = list(spec.panel_labels)
@@ -1522,6 +2017,13 @@ def main() -> None:
             tab_pattern_metrics(df, spec)
         else:
             tab_physics(df, spec)
+    elif spec.analysis_mode == "orbit":
+        if panel == labels[0]:
+            tab_orbit_elementary(spec)
+        elif panel == labels[1]:
+            tab_orbit_formal(spec)
+        else:
+            tab_orbit_physics(df, spec)
     else:  # interaction
         if panel == labels[0]:
             tab_geometry_sources(df, spec)

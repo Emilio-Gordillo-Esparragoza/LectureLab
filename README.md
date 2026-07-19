@@ -1,6 +1,6 @@
 # The Well · Statistical Laboratory
 
-Statistical analysis and an interactive ANOVA dashboard for physics simulations from **[The Well](https://github.com/PolymathicAI/the_well)**.
+Statistical analysis and an interactive ANOVA dashboard for physics simulations from **[The Well](https://github.com/PolymathicAI/the_well)**, plus a pedagogical **Feynman Lost Lecture** lab on elliptical orbits.
 
 Supported ensembles (sidebar picker):
 
@@ -9,8 +9,9 @@ Supported ensembles (sidebar picker):
 | `active_matter` | `polymathic-ai/active_matter` | ANOVA (sandbox + real-data) | `alpha` × `zeta` |
 | `gray_scott` | `polymathic-ai/gray_scott_reaction_diffusion` | **(f, k) phase diagram** + metrics vs params | `f` × `k` (6 regimes) |
 | `acoustic_scattering` | `polymathic-ai/acoustic_scattering_maze` | **Response surfaces / interaction plots** | `maze_width` × `n_sources` |
+| `planetary_motion` | pedagogical synthetic (not The Well) | **Feynman hodograph** elementary + formal proof | `eccentricity` × `angular_momentum` |
 
-ANOVA panels appear **only** for `active_matter`. Gray–Scott and acoustic use exploratory phase-diagram and multiparameter views instead.
+ANOVA panels appear **only** for `active_matter`. Gray–Scott and acoustic use exploratory phase-diagram and multiparameter views instead. `planetary_motion` is a geometric / celestial lab (Feynman’s Lost Lecture).
 
 **Live demo:** [https://physcientific.onrender.com/](https://physcientific.onrender.com/)  
 *(Render free tier may cold-start for ~30–60s after idle.)*
@@ -24,16 +25,25 @@ Repository: [Emilio-Gordillo-Esparragoza/phyScientific](https://github.com/Emili
 3. **Validates** approximate physics / sanity checks (catalog-driven per dataset).
 4. **Flags anomalies** within each circumstance cell.
 5. Ships an **interactive Streamlit app** with a hamburger sidebar to switch datasets, plus a teaching ANOVA sandbox.
+6. **`planetary_motion`:** interactive dual-plane (position + velocity) demonstration that inverse-square gravity + equal areas imply elliptical orbits, with a formal Runge–Lenz companion, notebook, and docs.
 
 ## UI: dataset sidebar
 
-The lab board keeps the same palette and chart-paper grid. Use the **three-line control (top-left)** to open the sidebar and select `active_matter`, `gray_scott`, or `acoustic_scattering`. Branding, factors, response lists, and physics cards update from [`src/dataset_catalog.py`](src/dataset_catalog.py).
+The lab board keeps the same palette and chart-paper grid. Use the **three-line control (top-left)** to open the sidebar and select `active_matter`, `gray_scott`, `acoustic_scattering`, or `planetary_motion`. Branding, factors, response lists, and physics cards update from [`src/dataset_catalog.py`](src/dataset_catalog.py).
 
+## Mathematical documentation
+
+Precise write-ups of **all math used in the repo** (what, why, assumptions, citations):
+
+- [`docs/README.md`](docs/README.md) — index by lab  
+- [`docs/bibliography.md`](docs/bibliography.md) — Fisher, Newton, Maxwell, Goodstein, Turing, …  
+- Celestial: [`docs/celestial/feynman_elementary.md`](docs/celestial/feynman_elementary.md), [`docs/celestial/feynman_formal.md`](docs/celestial/feynman_formal.md)  
+- Notebook: [`notebooks/feynman_lost_lecture.ipynb`](notebooks/feynman_lost_lecture.ipynb)
 ## Findings (active_matter)
 
 Results below are from the committed real feature table [`data/features.parquet`](data/features.parquet) (also mirrored as [`data/features_active_matter.parquet`](data/features_active_matter.parquet)): **134** trajectories, **45/45** α×ζ factorial cells, `synthetic = 0`. Features were computed while streaming The Well train split from Hugging Face with `--time-stride 8 --space-stride 16` (analysis-ready table, not full-resolution fields).
 
-`gray_scott` and `acoustic_scattering` ship with **synthetic** demo tables so the sidebar works offline; replace them with real extracts when ready (see Data below).
+`gray_scott`, `acoustic_scattering`, and `planetary_motion` ship with **synthetic** demo tables so the sidebar works offline; replace the Well extracts with real data when ready (see Data below). `planetary_motion` is always synthetic / pedagogical.
 
 ### Experimental design (active_matter)
 
@@ -77,23 +87,37 @@ All headline numbers refer to the stride-reduced feature table used for statisti
 
 ```
 phyScientific/
-├── app/streamlit_app.py      # Dashboard (sidebar + 3 panels)
+├── app/streamlit_app.py      # Dashboard (sidebar + panels per analysis_mode)
 ├── data/
 │   ├── features.parquet                 # active_matter (legacy path)
 │   ├── features_active_matter.parquet   # canonical active_matter
 │   ├── features_gray_scott.parquet
-│   └── features_acoustic_scattering.parquet
-├── notebooks/analysis.ipynb  # Narrative statistical analysis
+│   ├── features_acoustic_scattering.parquet
+│   └── features_planetary_motion.parquet
+├── docs/                     # Math resources (stats, physics, celestial)
+│   ├── README.md
+│   ├── bibliography.md
+│   ├── statistics/
+│   ├── physics/
+│   └── celestial/
+├── notebooks/
+│   ├── analysis.ipynb
+│   ├── gray_scott_analysis.ipynb
+│   ├── acoustic_scattering_analysis.ipynb
+│   └── feynman_lost_lecture.ipynb
+├── scripts/
+│   ├── build_analysis_notebooks.py
+│   └── build_feynman_notebook.py
 ├── src/
 │   ├── dataset_catalog.py    # Dataset registry (factors, checks, copy)
 │   ├── extract_features.py   # HF stream / synthetic feature builder
+│   ├── orbit_feynman.py      # Kepler / hodograph geometry
 │   └── stats.py              # Shared ANOVA / t-test / anomaly helpers
 ├── requirements.txt          # Full local stack (extraction + app)
 ├── requirements-app.txt      # Slim runtime deps (Render / demo)
 ├── render.yaml               # Render Blueprint
 └── README.md
 ```
-
 ## Environment (important)
 
 Default system Python may be **3.14**. Extraction needs **3.11 or 3.12**. A `.venv` on Python 3.12 is expected:
@@ -154,6 +178,7 @@ Default output paths come from the catalog (`data/features_<id>.parquet`).
 python -m src.extract_features --dataset active_matter --synthetic
 python -m src.extract_features --dataset gray_scott --synthetic
 python -m src.extract_features --dataset acoustic_scattering --synthetic
+python -m src.extract_features --dataset planetary_motion --synthetic
 ```
 
 ## Run the analysis notebook

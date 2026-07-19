@@ -49,7 +49,7 @@ class DatasetSpec:
     footer_label: str
     feature_path: Path
     legacy_feature_paths: tuple[Path, ...] = ()
-    # "anova" | "phase" | "interaction" — drives which Streamlit panels appear
+    # "anova" | "phase" | "interaction" | "orbit" — drives which Streamlit panels appear
     analysis_mode: str = "anova"
     factor_a: str = "alpha"
     factor_b: str = "zeta"
@@ -321,10 +321,103 @@ ACOUSTIC = DatasetSpec(
     ),
 )
 
+PLANETARY = DatasetSpec(
+    id="planetary_motion",
+    hf_name="feynman_lost_lecture_synthetic",
+    title="planetary_motion · The motion of planets around the Sun",
+    lede=(
+        "Prove that inverse-square gravity plus equal areas imply an elliptical orbit, "
+        "via Feynman’s elementary velocity-space (hodograph) demonstration and a formal "
+        "Runge–Lenz / Binet companion."
+    ),
+    blurb=(
+        "Pedagogical reconstruction of <b>Feynman’s Lost Lecture</b> "
+        "(“The Motion of Planets Around the Sun,” 1964; Goodstein &amp; Goodstein). "
+        "A planet under Newton’s inverse-square law "
+        "<code>F ∝ 1/r²</code> with conserved angular momentum (Kepler’s second law) "
+        "has a <b>circular velocity hodograph</b>. An eccentric point on that circle, "
+        "together with a 90° rotation, recovers the gardener’s definition of an ellipse "
+        "with the Sun at a focus. This lab is <b>synthetic / geometric</b> — not a "
+        "The Well ensemble. Companion video: "
+        "<a href='https://youtu.be/xdIjYBtnvZU'>youtu.be/xdIjYBtnvZU</a>. "
+        "See also <code>docs/celestial/</code> and "
+        "<code>notebooks/feynman_lost_lecture.ipynb</code>."
+    ),
+    footer_label="Feynman · Lost Lecture · Kepler–Newton",
+    feature_path=ROOT / "data" / "features_planetary_motion.parquet",
+    analysis_mode="orbit",
+    factor_a="eccentricity",
+    factor_b="angular_momentum",
+    factor_a_label="e",
+    factor_b_label="h",
+    response_options=(
+        "focus_sum_error",
+        "hodograph_circle_rms",
+        "ang_mom_cv",
+        "semi_major_a",
+        "h_mean",
+    ),
+    default_response="hodograph_circle_rms",
+    physics_checks=(
+        PhysicsCheckSpec(
+            key="focus_sum",
+            title="Ellipse focus-sum |PF₁|+|PF₂| = 2a",
+            kind="mean_near_target",
+            column="focus_sum_error",
+            target=0.0,
+            tol=1e-4,
+            pass_message="Focus-sum residual near zero — elliptical orbits",
+            fail_message="Focus-sum residual too large",
+        ),
+        PhysicsCheckSpec(
+            key="hodograph_circle",
+            title="Velocity hodograph is circular",
+            kind="range",
+            column="hodograph_circle_rms",
+            lo=0.0,
+            hi=1e-4,
+            pass_message="Hodograph circle-fit RMS is numerically zero",
+            fail_message="Hodograph departs from a circle",
+        ),
+        PhysicsCheckSpec(
+            key="angular_momentum",
+            title="Specific angular momentum conserved",
+            kind="range",
+            column="ang_mom_cv",
+            lo=0.0,
+            hi=1e-8,
+            pass_message="Coefficient of variation of h is near 0",
+            fail_message="Angular momentum drifts along the orbit",
+        ),
+        PhysicsCheckSpec(
+            key="finite_orbit",
+            title="Finite orbit diagnostics",
+            kind="finite",
+            columns=("semi_major_a", "h_mean", "hodograph_circle_rms", "focus_sum_error"),
+        ),
+    ),
+    findings_real=(
+        "On <b>{n_rows}</b> synthetic orbits across <b>{n_cells}</b> (e, h) cells, "
+        "the velocity tip traces a circle and the focus-sum test recovers ellipses. "
+        "Walk the <b>elementary demonstration</b>, then the <b>formal</b> Runge–Lenz proof."
+    ),
+    scatter_x="eccentricity",
+    scatter_y="hodograph_circle_rms",
+    scatter_color="angular_momentum",
+    scatter_title="Hodograph circle-fit RMS vs eccentricity (colored by h)",
+    hf_url="https://youtu.be/xdIjYBtnvZU",
+    panel_labels=(
+        "Elementary demonstration",
+        "Formal demonstration",
+        "Physics & anomalies",
+    ),
+)
+
 DATASETS: dict[str, DatasetSpec] = {
     ACTIVE_MATTER.id: ACTIVE_MATTER,
     GRAY_SCOTT.id: GRAY_SCOTT,
     ACOUSTIC.id: ACOUSTIC,
+    PLANETARY.id: PLANETARY,
 }
 
 DATASET_IDS: tuple[str, ...] = tuple(DATASETS.keys())

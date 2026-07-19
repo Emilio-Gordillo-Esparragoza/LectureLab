@@ -1,7 +1,7 @@
 """
 Extract scalar physics features from The Well trajectories.
 
-Supports datasets: active_matter, gray_scott, acoustic_scattering.
+Supports datasets: active_matter, gray_scott, acoustic_scattering, planetary_motion.
 Streams HDF5 from Hugging Face (or a local mirror), downsamples in
 space/time for speed, and writes a tidy features.parquet for ANOVA / t-tests.
 
@@ -491,6 +491,21 @@ def generate_synthetic_acoustic(
     return pd.DataFrame(rows)
 
 
+def generate_synthetic_planetary(
+    n_replicates: int = 3,
+    seed: int = 42,
+    splits: Iterable[str] = ("train",),
+) -> pd.DataFrame:
+    """Synthetic Kepler-orbit diagnostics for the Feynman / hodograph lab."""
+    from src.orbit_feynman import build_feature_grid
+
+    df = build_feature_grid(n_replicates=n_replicates, seed=seed)
+    # Mirror split column for parity with other synthetic tables
+    split_list = list(splits) or ["train"]
+    df["split"] = split_list[0]
+    return df
+
+
 def generate_synthetic_for_dataset(
     dataset_id: str,
     n_replicates: int = 5,
@@ -503,6 +518,8 @@ def generate_synthetic_for_dataset(
         return generate_synthetic_gray_scott(n_replicates, seed, splits)
     if dataset_id == "acoustic_scattering":
         return generate_synthetic_acoustic(n_replicates, seed, splits)
+    if dataset_id == "planetary_motion":
+        return generate_synthetic_planetary(n_replicates, seed, splits)
     raise ValueError(f"Unknown dataset_id={dataset_id!r}")
 
 
@@ -1091,6 +1108,12 @@ def main() -> None:
             df.to_parquet(legacy, index=False)
         print(f"Wrote {len(df)} synthetic rows -> {out_path}")
         return
+
+    if args.dataset == "planetary_motion":
+        raise SystemExit(
+            "planetary_motion is a pedagogical synthetic lab. "
+            "Re-run with --synthetic (no Hugging Face download)."
+        )
 
     run_extraction(
         splits=args.splits,
