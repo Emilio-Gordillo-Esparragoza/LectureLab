@@ -2,7 +2,8 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-.streamlit/
+# Keep committed theme; ignore local secrets only
+.streamlit/secrets.toml
 data/*.hdf5
 data/raw/
 data/*.log

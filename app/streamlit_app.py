@@ -169,6 +169,29 @@ def inject_lab_css() -> None:
             font-weight: 600;
         }}
 
+        .lab-findings {{
+            background: var(--paper-deep);
+            border: 1px solid var(--ink);
+            border-left: 4px solid var(--olive);
+            padding: 0.75rem 1rem;
+            margin: 0 0 1.2rem 0;
+        }}
+        .lab-findings-label {{
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 0.68rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--olive);
+            margin-bottom: 0.35rem;
+        }}
+        .lab-findings p {{
+            font-family: "Source Serif 4", Georgia, serif;
+            font-size: 0.98rem;
+            color: var(--ink);
+            line-height: 1.45;
+            margin: 0;
+        }}
+
         /* Tabs — ruled notebook feel */
         .stTabs [data-baseweb="tab-list"] {{
             gap: 0.15rem;
@@ -320,6 +343,22 @@ def data_provenance(df: pd.DataFrame) -> dict:
 def lab_header(df: pd.DataFrame) -> None:
     meta = data_provenance(df)
     source = "synthetic demo" if meta["synthetic"] else "The Well · active_matter (real)"
+    findings_html = ""
+    if not meta["synthetic"]:
+        findings_html = f"""
+        <div class="lab-findings">
+          <div class="lab-findings-label">Results at a glance</div>
+          <p>
+            On <b>{meta["n_rows"]}</b> real trajectories covering all
+            <b>{meta["n_cells"]}</b> α×ζ cells, two-way ANOVA shows
+            <b>alignment (ζ)</b> dominates nematic order
+            (partial η² ≈ 0.97), while <b>dipole (α)</b> has little main effect
+            and acts mainly through an α×ζ interaction. Concentration stays at 1;
+            order rises with ζ (Spearman ρ ≈ 0.86). See the README Findings section
+            for full numbers and caveats.
+          </p>
+        </div>
+        """
     st.markdown(
         f"""
         <div class="lab-kicker">Statistical laboratory · PolymathicAI The Well</div>
@@ -335,6 +374,7 @@ def lab_header(df: pd.DataFrame) -> None:
           <span>ζ levels <b>{meta["n_zeta"]}</b></span>
           <span>factorial cells <b>{meta["n_cells"]}</b></span>
         </div>
+        {findings_html}
         """,
         unsafe_allow_html=True,
     )
