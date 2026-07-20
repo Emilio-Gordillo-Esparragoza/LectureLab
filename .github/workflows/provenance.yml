@@ -1,0 +1,58 @@
+name: SLSA provenance
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: Attest source archive (SLSA)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build source archive
+        id: archive
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          SAFE_VERSION="${VERSION//\//-}"
+          ARCHIVE="lecturelab-${SAFE_VERSION}.tar.gz"
+          tar \
+            --exclude='.git' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='.pytest_cache' \
+            --exclude='*.pyc' \
+            -czf "${ARCHIVE}" \
+            LICENSE README.md CONTRIBUTING.md pyproject.toml \
+            requirements.txt requirements-app.txt requirements-ci.txt \
+            render.yaml runtime.txt \
+            app src tests docs scripts data .streamlit
+          echo "path=${ARCHIVE}" >> "$GITHUB_OUTPUT"
+          sha256sum "${ARCHIVE}" | tee "${ARCHIVE}.sha256"
+
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-archive
+          path: |
+            ${{ steps.archive.outputs.path }}
+            ${{ steps.archive.outputs.path }}.sha256
+          if-no-files-found: error
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.archive.outputs.path }}

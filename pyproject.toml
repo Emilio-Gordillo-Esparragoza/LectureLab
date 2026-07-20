@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lecturelab"
+version = "0.1.0"
+description = "Statistical laboratory and Feynman orbit labs for physics simulation ensembles"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "Emilio Gordillo Esparragoza" }]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "app", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "W",   # warnings
+]
+ignore = [
+  "E501",  # long math / prose strings
+  "B905",  # zip(..., strict=) — gradual adoption
+  "UP037", # quoted forward refs used where pandas is lazy-imported
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/streamlit_app.py" = ["E402", "B008", "I001"]
+"scripts/*" = ["E402", "I001", "F401", "W291"]
+"src/orbit_feynman.py" = ["F841", "F821"]
+"src/extract_features.py" = ["UP035", "I001"]
+"src/stats.py" = ["I001"]
+"tests/*" = ["I001"]
+"notebooks/*" = ["E402", "F401", "F841"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/extract_features.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+fail_under = 40

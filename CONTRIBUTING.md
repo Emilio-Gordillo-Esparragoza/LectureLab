@@ -20,4 +20,12 @@ Thanks for your interest. This project is licensed under the **Apache License 2.
 
 See the [README](README.md) for Python env, Streamlit, and data notes.
 
+```bash
+pip install -r requirements-ci.txt
+ruff check src app tests scripts
+pytest --cov=src
+```
+
+CI must stay green on PRs (lint, tests, dependency review, secret scan).
+
 Educational reuse (teaching, workshops, course materials) is explicitly welcome under Apache 2.0 — keep the license and copyright notice.

@@ -20,6 +20,29 @@ Repository: [Emilio-Gordillo-Esparragoza/LectureLab](https://github.com/Emilio-G
 
 **License:** [Apache License 2.0](LICENSE) — free to use, modify, and redistribute for education and research; contributions welcome under the same terms. See also [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Continuous integration
+
+GitHub Actions on `main` / PRs:
+
+| Workflow | What it does |
+|----------|----------------|
+| **CI** | Ruff lint, pytest (+ coverage) on Python 3.11/3.12, `pip-audit` |
+| **CodeQL** | Static analysis (security + quality) |
+| **Dependency review** | Blocks high-severity dependency changes on PRs |
+| **Scorecard** | OpenSSF Scorecard → Security tab |
+| **Secret scan** | Gitleaks |
+| **SLSA provenance** | Signed build provenance for a source archive (`actions/attest-build-provenance`) |
+
+Locally:
+
+```bash
+pip install -r requirements-ci.txt
+ruff check src app tests scripts
+pytest --cov=src
+```
+
+Security policy: [`SECURITY.md`](SECURITY.md). Dependabot keeps Actions and pip deps updated weekly.
+
 ## What this project does
 
 1. **Extracts** scalar physics features from each trajectory plus dataset-specific control factors.
