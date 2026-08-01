@@ -20,29 +20,6 @@ Repository: [Emilio-Gordillo-Esparragoza/LectureLab](https://github.com/Emilio-G
 
 **License:** [Apache License 2.0](LICENSE) — free to use, modify, and redistribute for education and research; contributions welcome under the same terms. See also [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Continuous integration
-
-GitHub Actions on `main` / PRs:
-
-| Workflow | What it does |
-|----------|----------------|
-| **CI** | Ruff lint, pytest (+ coverage) on Python 3.11/3.12, `pip-audit` |
-| **CodeQL** | Static analysis (security + quality) |
-| **Dependency review** | Blocks high-severity dependency changes on PRs |
-| **Scorecard** | OpenSSF Scorecard → Security tab |
-| **Secret scan** | Gitleaks |
-| **SLSA provenance** | Signed build provenance for a source archive (`actions/attest-build-provenance`) |
-
-Locally:
-
-```bash
-pip install -r requirements-ci.txt
-ruff check src app tests scripts
-pytest --cov=src
-```
-
-Security policy: [`SECURITY.md`](SECURITY.md). Dependabot keeps Actions and pip deps updated weekly.
-
 ## What this project does
 
 1. **Extracts** scalar physics features from each trajectory plus dataset-specific control factors.
@@ -51,10 +28,6 @@ Security policy: [`SECURITY.md`](SECURITY.md). Dependabot keeps Actions and pip 
 4. **Flags anomalies** within each circumstance cell.
 5. Ships an **interactive Streamlit app** with a hamburger sidebar to switch datasets, plus a teaching ANOVA sandbox.
 6. **`planetary_motion`:** interactive dual-plane (position + velocity) demonstration that inverse-square gravity + equal areas imply elliptical orbits, with a formal Runge–Lenz companion, notebook, and docs.
-
-## UI: dataset sidebar
-
-The lab board keeps the same palette and chart-paper grid. Use the **three-line control (top-left)** to open the sidebar and select `active_matter`, `gray_scott`, `acoustic_scattering`, or `planetary_motion`. Branding, factors, response lists, and physics cards update from [`src/dataset_catalog.py`](src/dataset_catalog.py).
 
 ## Mathematical documentation
 
